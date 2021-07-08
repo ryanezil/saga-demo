@@ -18,7 +18,7 @@ The stock catalog is initialized with two items:
 |=== 
 
 
-Example: 
+Example requesting a purchase with three cars: 
 [source,bash,options="nowrap",subs="attributes+"]
 ----
 curl -X POST "http://localhost:8180/camel/purchases/car/3" -H  "accept: application/json"
@@ -28,7 +28,7 @@ curl -X POST "http://localhost:8180/camel/purchases/car/3" -H  "accept: applicat
 The stock-service will return error when the ItemId is not found or the available quanity is less than the requested.
 
 
-NOTE: For testing purposes (to force the SAGA compensation once the two other microsercies have been called), the `demo-service` is hardcoded to throw an error if the quantity equals *27*. 
+NOTE: For testing purposes (to force the SAGA compensation once the two other microservices have been called), the `demo-service` is hardcoded to throw an error if the quantity equals *27*. 
 
 Browse the API's Swagger page: open the root web page for every microservice and click on the link to review the API.
 
@@ -36,7 +36,8 @@ Browse the API's Swagger page: open the root web page for every microservice and
 
 This DEMO implements link:https://microservices.io/patterns/data/saga.html[SAGA EIP] using orchestration.
 
-The coordinator used is developed by Narayana. See the link: link:https://narayana.io/lra/[Long Running Actions (LRA)]
+The coordinator used is implemented by Narayana, meeting the  link:https://github.com/eclipse/microprofile-lra[Eclipse MicroProfile specification]. See the link: link:https://narayana.io/lra/[Long Running Actions (LRA)]
+
 
 Related links:
 
