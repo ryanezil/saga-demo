@@ -1,0 +1,149 @@
+= Red Hat FUSE - SAGA-EIP using LRA coordinator demo
+
+This is a small demo exposing three microservices using link:https://access.redhat.com/documentation/en-us/red_hat_fuse/7.8/[Red Hat Fuse 7.8]:
+
+
+* `demo-service`: the main microservice starting the saga and calling the other microservices
+* `order-service`: it _creates_ a new order placing the item and quantity requested.
+* `stock-service`: it manages the inventory/catalog. It checks if there are enought amount of pieces per item. It will reserve the requested quantity removing from the available stock.
+
+The stock catalog is initialized with two items:
+
+[%autowidth,cols="1,1"]
+|===
+| ItemID | Available quantity
+
+|car | 40
+|bike | 100
+|=== 
+
+
+Example: 
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ curl -X POST "http://localhost:8180/camel/purchases/car/3" -H  "accept: application/json"
+----
+
+
+The stock-service will return error when the ItemId is not found or the available quanity is less than the requested.
+
+
+NOTE: For testing purposes (to force the SAGA compensation once the two other microsercies have been called), the `demo-service` is hardcoded to throw an error if the quantity equals *27*. 
+
+Browse the API's Swagger page: open the root web page for every microservice and click on the link to review the API.
+
+== Narayana LRA Coordinator
+
+This DEMO implements link:https://microservices.io/patterns/data/saga.html[SAGA EIP] using orchestration.
+
+The coordinator used is developed by Narayana. See the link: link:https://narayana.io/lra/[Long Running Actions (LRA)]
+
+Related links:
+
+* link:https://hub.docker.com/r/jbosstm/lra-coordinator/[Docker Hub lra-coordinator image]
+* link:https://github.com/jboss-dockerfiles/narayana/tree/master/lra/lra-coordinator[Dockerfile for lra-coordinator]
+* link:https://github.com/jboss-dockerfiles/narayana[Narayana Docker and OpenShift artifacts]
+* link:https://access.redhat.com/documentation/en-us/red_hat_fuse/7.8/html/apache_camel_development_guide/saga-eip[Red Hat Fuse - Apache Camel Development Guide - Chapter 9. Saga EIP]
+
+
+== Deployment options
+
+You can run this demo in the following modes:
+
+* OpenShift
+* Standalone on your machine
+
+
+For more details about running the project on OpenShift, CI/CD deployments, as well as the rest of the runtime, see the link:http://appdev.openshift.io/docs/spring-boot-runtime.html[Spring Boot Runtime Guide].
+
+IMPORTANT: Fuse 7.X requires Java 8 JDK
+
+
+== Running the demo on OpenShift cluster
+
+Fuse images are required for building the application image. The following steps will create a new project, import base images, and finally using link:https://www.eclipse.org/jkube/docs/openshift-maven-plugin[JKube] the application is built and deployed.
+
+
+. Log in to your OpenShift cluster:
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ oc login -u developer -p developer
+----
+
+. Create a new OpenShift project for the demo:
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ oc new-project MY_PROJECT_NAME
+----
+
+. Deploy the LRA Coordinator POD using the link:https://github.com/jboss-dockerfiles/narayana/tree/master/lra/openshift-template[template]:
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ oc create -f lra-coordinator-template.yaml
+
+$ oc new-app --template=lra-coordinator -e LOG_LEVEL=DEBUG
+----
+
+. Import base images into your newly created project (MY_PROJECT_NAME):
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ oc import-image fuse-java-openshift:1.8 --from=registry.access.redhat.com/fuse7/fuse-java-openshift:1.8 -n $(oc project -q) --confirm
+----
+
+. Build and deploy every microservcie to the OpenShift project/namespace:
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ mvn clean -DskipTests oc:deploy -Popenshift -Djkube.generator.fromMode=istag -Djkube.generator.from=$(oc project -q)/fuse-java-openshift:1.8
+----
+
+. In your browser, navigate to the `MY_PROJECT_NAME` project in the OpenShift console.
+Wait until you can see that all POD applications have started up.
+
+. Retrieve the URL for the `demo-service` application.
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ oc get route demo-service -o jsonpath='http://{.spec.host}{"\n"}'
+----
+
+. Open the URL to access the `demo-service` application and then follow the instructions on that page.
+
+. Undeploy the project when it is not longer needed
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ mvn oc:undeploy -Popenshift
+----
+
+== Running the demo standalone on your machine
+
+To run this demo as a standalone project on your local machine:
+
+
+. Start a local LRA-Coordinator
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ podman run --name lra-coordinator -p 8080:8080 -e LOG_LEVEL=DEBUG jbosstm/lra-coordinator
+----
+
+. Build the whole project:
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ cd PROJECT_DIR
+$ mvn clean package
+----
+
+. Run all the services (execute the command using different shells, for every microservice POM module):
++
+[source,bash,options="nowrap",subs="attributes+"]
+----
+$ mvn spring-boot:run
+----
+. Go to link:http://localhost:8180[] and then follow the instructions on that page.

@@ -1,0 +1,44 @@
+camel:
+  health:
+    enabled: false
+    indicator:
+      enabled: true
+
+  component:
+    servlet:
+      mapping:
+        context-path: /camel/*
+
+  service:
+    lra:
+      enabled: true
+      coordinator-url: http://${HOSTNAME}:8080
+      local-participant-url: http://${HOSTNAME}:8380/camel
+
+
+# disable all management endpoints except health
+endpoints:
+  enabled: false
+  health:
+    enabled: true
+management:
+  health:
+    defaults:
+      enabled: false
+server:
+  port: 8380
+
+---
+# ######################################
+# Active configuration when deployed
+spring:
+  profiles: deployed
+# ######################################
+camel:
+  service:
+    lra:
+      coordinator-url: http://lra-coordinator:8080
+      local-participant-url: http://stock-service:8080/camel
+
+server:
+  port: 8080
